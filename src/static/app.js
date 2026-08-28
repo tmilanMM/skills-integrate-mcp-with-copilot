@@ -29,7 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
-    const candidate = btoa(`${username}:${password}`);
+    const candidate = btoa(
+      Array.from(
+        new TextEncoder().encode(`${username}:${password}`),
+        (b) => String.fromCharCode(b)
+      ).join("")
+    );
     const response = await fetch("/auth/teacher", {
       headers: { Authorization: `Basic ${candidate}` },
     });
