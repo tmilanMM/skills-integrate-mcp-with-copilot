@@ -24,8 +24,14 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
 security = HTTPBasic()
 
-with open(current_dir / "teachers.json", encoding="utf-8") as teachers_file:
-    teachers = json.load(teachers_file)["teachers"]
+try:
+    with open(current_dir / "teachers.json", encoding="utf-8") as teachers_file:
+        payload = json.load(teachers_file)
+        teachers = payload.get("teachers", [])
+except FileNotFoundError as exc:
+    raise RuntimeError("teachers.json not found; configure teacher credentials") from exc
+except (json.JSONDecodeError, OSError) as exc:
+    raise RuntimeError("Invalid teachers.json; expected JSON with a 'teachers' list") from exc
 
 
 def require_teacher(credentials: HTTPBasicCredentials = Depends(security)):
