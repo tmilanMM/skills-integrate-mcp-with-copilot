@@ -3,6 +3,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const loginButton = document.getElementById("login-button");
+  const loginDialog = document.getElementById("login-dialog");
+  const loginForm = document.getElementById("login-form");
+  const cancelLogin = document.getElementById("cancel-login");
+  const loginMessage = document.getElementById("login-message");
+  let teacherCredentials = null;
+
+  function authorizationHeaders() {
+    return teacherCredentials
+      ? { Authorization: `Basic ${teacherCredentials}` }
+      : {};
+  }
+
+  function requestLogin() {
+    loginMessage.classList.add("hidden");
+    loginForm.reset();
+    loginDialog.showModal();
+  }
+
+  loginButton.addEventListener("click", requestLogin);
+  cancelLogin.addEventListener("click", () => loginDialog.close());
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const candidate = btoa(
+      Array.from(
+        new TextEncoder().encode(`${username}:${password}`),
+        (b) => String.fromCharCode(b)
+      ).join("")
+    );
+    const response = await fetch("/auth/teacher", {
+      headers: { Authorization: `Basic ${candidate}` },
+    });
+
+    if (!response.ok) {
+      loginMessage.textContent = "Invalid teacher credentials.";
+      loginMessage.classList.remove("hidden");
+      return;
+    }
+
+    teacherCredentials = candidate;
+    loginButton.textContent = "Teacher logged in";
+    loginDialog.close();
+  });
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -69,6 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Handle unregister functionality
   async function handleUnregister(event) {
+    if (!teacherCredentials) {
+      requestLogin();
+      return;
+    }
+
     const button = event.target;
     const activity = button.getAttribute("data-activity");
     const email = button.getAttribute("data-email");
@@ -80,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/unregister?email=${encodeURIComponent(email)}`,
         {
           method: "DELETE",
+          headers: authorizationHeaders(),
         }
       );
 
@@ -117,6 +169,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = document.getElementById("email").value;
     const activity = document.getElementById("activity").value;
 
+    if (!teacherCredentials) {
+      requestLogin();
+      return;
+    }
+
     try {
       const response = await fetch(
         `/activities/${encodeURIComponent(
@@ -124,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/signup?email=${encodeURIComponent(email)}`,
         {
           method: "POST",
+          headers: authorizationHeaders(),
         }
       );
 
